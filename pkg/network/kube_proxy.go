@@ -4,6 +4,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/pkg/errors"
@@ -173,7 +174,7 @@ func isKubeProxyChangeSafe(prev, next *operv1.NetworkSpec) []error {
 
 // renderStandaloneKubeProxy renders the standalone kube-proxy if installation was
 // requested.
-func renderStandaloneKubeProxy(conf *operv1.NetworkSpec, bootstrapResult *bootstrap.BootstrapResult, manifestDir string) ([]*uns.Unstructured, error) {
+func renderStandaloneKubeProxy(conf *operv1.NetworkSpec, bootstrapResult *bootstrap.BootstrapResult, manifestDir string, nodeLocalKubernetesAPILoadbalancerIP string, nodeLocalKubernetesAPILoadbalancerPort int32) ([]*uns.Unstructured, error) {
 	if !*conf.DeployKubeProxy {
 		return nil, nil
 	}
@@ -206,8 +207,8 @@ func renderStandaloneKubeProxy(conf *operv1.NetworkSpec, bootstrapResult *bootst
 	data.Data["ReleaseVersion"] = os.Getenv("RELEASE_VERSION")
 	data.Data["KubeProxyImage"] = os.Getenv("KUBE_PROXY_IMAGE")
 	data.Data["KubeRBACProxyImage"] = os.Getenv("KUBE_RBAC_PROXY_IMAGE")
-	data.Data["KUBERNETES_SERVICE_HOST"] = bootstrapResult.Infra.APIServers[bootstrap.APIServerDefault].Host
-	data.Data["KUBERNETES_SERVICE_PORT"] = bootstrapResult.Infra.APIServers[bootstrap.APIServerDefault].Port
+	data.Data["KUBERNETES_SERVICE_HOST"] = nodeLocalKubernetesAPILoadbalancerIP
+	data.Data["KUBERNETES_SERVICE_PORT"] = strconv.Itoa(int(nodeLocalKubernetesAPILoadbalancerPort))
 	data.Data["KubeProxyConfig"] = kpc
 	data.Data["MetricsPort"] = metricsPort
 	data.Data["HealthzPort"] = healthzPort

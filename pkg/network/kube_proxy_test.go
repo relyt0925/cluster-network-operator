@@ -403,10 +403,12 @@ func TestRenderKubeProxy(t *testing.T) {
 			IptablesSyncPeriod: "42s",
 		},
 	}
+	nodeLocalKubernetesAPILoadbalancerIP := "172.20.0.1"
+	nodeLocalKubernetesAPILoadbalancerPort := int32(6443)
 
 	fillKubeProxyDefaults(c, nil)
 
-	objs, err := renderStandaloneKubeProxy(c, &FakeKubeProxyBootstrapResult, manifestDir)
+	objs, err := renderStandaloneKubeProxy(c, &FakeKubeProxyBootstrapResult, manifestDir, nodeLocalKubernetesAPILoadbalancerIP, nodeLocalKubernetesAPILoadbalancerPort)
 	g.Expect(err).NotTo(HaveOccurred())
 
 	g.Expect(objs).To(HaveLen(10))

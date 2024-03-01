@@ -3,6 +3,7 @@ package network
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 
 	configv1 "github.com/openshift/api/config/v1"
 	operv1 "github.com/openshift/api/operator/v1"
@@ -20,7 +21,7 @@ const (
 )
 
 // renderMultus generates the manifests of Multus
-func renderMultus(conf *operv1.NetworkSpec, bootstrapResult *bootstrap.BootstrapResult, manifestDir string) ([]*uns.Unstructured, error) {
+func renderMultus(conf *operv1.NetworkSpec, bootstrapResult *bootstrap.BootstrapResult, manifestDir string, nodeLocalKubernetesAPILoadbalancerIP string, nodeLocalKubernetesAPILoadbalancerPort int32) ([]*uns.Unstructured, error) {
 	if *conf.DisableMultiNetwork {
 		return nil, nil
 	}
@@ -41,7 +42,7 @@ func renderMultus(conf *operv1.NetworkSpec, bootstrapResult *bootstrap.Bootstrap
 	if conf.Migration != nil && conf.Migration.Mode == operv1.LiveNetworkMigrationMode {
 		isNetworkTypeLiveMigration = true
 	}
-	objs, err = renderMultusConfig(manifestDir, string(conf.DefaultNetwork.Type), usedhcp, usewhereabouts, h, p, bootstrapResult, isNetworkTypeLiveMigration)
+	objs, err = renderMultusConfig(manifestDir, string(conf.DefaultNetwork.Type), usedhcp, usewhereabouts, h, p, bootstrapResult, isNetworkTypeLiveMigration, nodeLocalKubernetesAPILoadbalancerIP, nodeLocalKubernetesAPILoadbalancerPort)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +58,7 @@ func renderMultus(conf *operv1.NetworkSpec, bootstrapResult *bootstrap.Bootstrap
 }
 
 // renderMultusConfig returns the manifests of Multus
-func renderMultusConfig(manifestDir, defaultNetworkType string, useDHCP bool, useWhereabouts bool, apihost, apiport string, bootstrapResult *bootstrap.BootstrapResult, isNetworkTypeLiveMigration bool) ([]*uns.Unstructured, error) {
+func renderMultusConfig(manifestDir, defaultNetworkType string, useDHCP bool, useWhereabouts bool, apihost, apiport string, bootstrapResult *bootstrap.BootstrapResult, isNetworkTypeLiveMigration bool, nodeLocalKubernetesAPILoadbalancerIP string, nodeLocalKubernetesAPILoadbalancerPort int32) ([]*uns.Unstructured, error) {
 	objs := []*uns.Unstructured{}
 
 	// render the manifests on disk
@@ -69,8 +70,8 @@ func renderMultusConfig(manifestDir, defaultNetworkType string, useDHCP bool, us
 	data.Data["WhereaboutsImage"] = os.Getenv("WHEREABOUTS_CNI_IMAGE")
 	data.Data["EgressRouterImage"] = os.Getenv("EGRESS_ROUTER_CNI_IMAGE")
 	data.Data["RouteOverrideImage"] = os.Getenv("ROUTE_OVERRRIDE_CNI_IMAGE")
-	data.Data["KUBERNETES_SERVICE_HOST"] = apihost
-	data.Data["KUBERNETES_SERVICE_PORT"] = apiport
+	data.Data["KUBERNETES_SERVICE_HOST"] = nodeLocalKubernetesAPILoadbalancerIP
+	data.Data["KUBERNETES_SERVICE_PORT"] = strconv.Itoa(int(nodeLocalKubernetesAPILoadbalancerPort))
 	data.Data["RenderDHCP"] = useDHCP
 	data.Data["RenderIpReconciler"] = useWhereabouts
 	data.Data["MultusCNIConfDir"] = MultusCNIConfDir

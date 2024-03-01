@@ -33,7 +33,7 @@ var dualStackPlatforms = sets.NewString(
 )
 
 func Render(conf *operv1.NetworkSpec, bootstrapResult *bootstrap.BootstrapResult, manifestDir string, client cnoclient.Client,
-	featureGates featuregates.FeatureGate) ([]*uns.Unstructured, bool, error) {
+	featureGates featuregates.FeatureGate, nodeLocalKubernetesAPILoadbalancerIP string, nodeLocalKubernetesAPILoadbalancerPort int32) ([]*uns.Unstructured, bool, error) {
 	log.Printf("Starting render phase")
 	var progressing bool
 	objs := []*uns.Unstructured{}
@@ -48,7 +48,7 @@ func Render(conf *operv1.NetworkSpec, bootstrapResult *bootstrap.BootstrapResult
 	objs = append(objs, o...)
 
 	// render Multus
-	o, err = renderMultus(conf, bootstrapResult, manifestDir)
+	o, err = renderMultus(conf, bootstrapResult, manifestDir, nodeLocalKubernetesAPILoadbalancerIP, nodeLocalKubernetesAPILoadbalancerPort)
 	if err != nil {
 		return nil, progressing, err
 	}
@@ -91,7 +91,7 @@ func Render(conf *operv1.NetworkSpec, bootstrapResult *bootstrap.BootstrapResult
 	// There is currently a restriction that renderStandaloneKubeProxy() is
 	// called after renderDefaultNetwork(). The OVN-Kubernetes code is enabling
 	// KubeProxy in Node Mode of "dpu".
-	o, err = renderStandaloneKubeProxy(conf, bootstrapResult, manifestDir)
+	o, err = renderStandaloneKubeProxy(conf, bootstrapResult, manifestDir, nodeLocalKubernetesAPILoadbalancerIP, nodeLocalKubernetesAPILoadbalancerPort)
 	if err != nil {
 		return nil, progressing, err
 	}

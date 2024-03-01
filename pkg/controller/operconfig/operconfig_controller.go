@@ -252,6 +252,22 @@ func (r *ReconcileOperConfig) Reconcile(ctx context.Context, request reconcile.R
 		return reconcile.Result{}, err
 	}
 
+	//Fetch Kubernetes address endpoint
+
+	endpointData, err := r.client.Default().Kubernetes().CoreV1().Endpoints("default").Get(context.TODO(), "kubernetes", metav1.GetOptions{})
+	if err != nil {
+		log.Printf("Unable to retrieve local kubernetes endpoint data: %v", err)
+		return reconcile.Result{}, err
+	}
+	nodeLocalKubernetesAPILoadbalancerIP := ""
+	nodeLocalKubernetesAPILoadbalancerPort := int32(0)
+	if len(endpointData.Subsets) != 1 || len(endpointData.Subsets[0].Addresses) != 1 || len(endpointData.Subsets[0].Ports) != 1 {
+		log.Printf("incluster kubernetes api endpoint is in invalid format: %v", err)
+		return reconcile.Result{}, err
+	}
+	nodeLocalKubernetesAPILoadbalancerIP = endpointData.Subsets[0].Addresses[0].IP
+	nodeLocalKubernetesAPILoadbalancerPort = endpointData.Subsets[0].Ports[0].Port
+
 	if operConfig.Spec.ManagementState == operv1.Unmanaged {
 		log.Printf("Operator configuration state is %s - skipping operconfig reconciliation", operConfig.Spec.ManagementState)
 		return reconcile.Result{}, nil
@@ -360,7 +376,7 @@ func (r *ReconcileOperConfig) Reconcile(ctx context.Context, request reconcile.R
 	// Generate the objects.
 	// Note that Render might have side effects in the passed in operConfig that
 	// will be reflected later on in the updated status.
-	objs, progressing, err := network.Render(&operConfig.Spec, bootstrapResult, ManifestPath, r.client, r.featureGates)
+	objs, progressing, err := network.Render(&operConfig.Spec, bootstrapResult, ManifestPath, r.client, r.featureGates, nodeLocalKubernetesAPILoadbalancerIP, nodeLocalKubernetesAPILoadbalancerPort)
 	if err != nil {
 		log.Printf("Failed to render: %v", err)
 		r.status.SetDegraded(statusmanager.OperatorConfig, "RenderError",
